@@ -23,3 +23,7 @@ Enter your password for testmarketo_biz:
 ```
 
 The command will upload all supported files specified in paths to the sftp server.
+
+## License
+
+[MIT](LICENSE)
