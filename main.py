@@ -48,7 +48,7 @@ def main():
     parser.add_argument('paths', nargs='*', help='Path to a directory or file to upload')
     args = parser.parse_args()
 
-    password = prompt_password('Enter your SFTP server password: ')
+    password = prompt_password(f'Enter your password for {args.username}: ')
 
     host = 'ftp.dreamdata.io'
     ssh = start_ssh(host, args.username, password)
