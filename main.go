@@ -17,6 +17,10 @@ import (
 const (
 	host = "ftp.dreamdata.io"
 	port = 22
+
+	knownHosts = `ftp.dreamdata.io ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDQQtl6pUnabMzYU/dmBlCmZ3ef8grqCDjnuWZBzevR9wiIbi6mWZhTLyRAlCTaB8EiLiBTeyGGRWXvQXSiXYoC7CpIu6x0u26XZIL6kOBt9qRo2DjIfMZuLOar191Zcj1WnANrzFrjw6cxBsNOS6E7hjzCfKqPU2b/ldLGBptm2C7gMUQSULaNzPLOqfhAC2TW5a+Ah9nLyZvxJL7+7fL3u76hIOS0uJqN4nsqncC4ql14GWr+zA2wltRVoYywAHqrDQqkfC/IDeURQzpzjb1WW+5vt51mVye+ULwmJxQXredo4X4AAdTNm8zyxnxZvKR7SbBfDlpxo3a3GF8Ohvc6wkBp8OnLdJexIw+ejtDZZiqWX4qqtOjUAS61a6u2wjgjTX7PpI2t4KVoZ09rLDkvDRu3bTKuj6FZ6qY7zq96Uo7W1guAEEgKr5NfgY3zcxxmFFL+SR5Yj+v06vPiA6AVaVOusz2Mfst0cnAyV7SuY/0CmrmS7S5XQbRsk5cHjhk=
+ftp.dreamdata.io ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGBFkxOWRqLeWzGD5xhkIlheQ9Kg3Z6fehdJ1RUYrHXzISrhr0NaoAWL9ivJMQjazCi1ouWhRV3wAMhxVvo7Ga4=
+ftp.dreamdata.io ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDQEtBMtsoTrJYrHL23oxpoYxclEsC8KCLU336xh3Uzk`
 )
 
 var (
@@ -46,6 +50,7 @@ Positional arguments:
 	}
 	// Define command-line flags
 	flag.StringVar(&username, "username", "", "SFTP server username")
+	flag.BoolVar(&noPrompt, "no-prompt", false, "Skip all prompts")
 	flag.BoolVar(&help, "help", false, "Show help")
 	flag.Parse()
 
@@ -75,7 +80,7 @@ func main() {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 		},
-		HostKeyCallback:   hostKeyCallback(),
+		HostKeyCallback:   loadHostKeys(),
 		HostKeyAlgorithms: []string{"ssh-ed25519"},
 		Timeout:           30 * time.Second,
 	}
@@ -101,6 +106,9 @@ func main() {
 
 			// Create directories on the remote server
 			if info.IsDir() {
+				if !promptBool(fmt.Sprintf("You will upload all files in %s. Continue? (y/n): ", path)) {
+					return filepath.SkipDir
+				}
 				if err := sftpClient.MkdirAll(path); err != nil {
 					return fmt.Errorf("failed to create directory %s: %v", path, err)
 				}
@@ -140,8 +148,23 @@ func promptPassword(prompt string) string {
 	return string(bytePassword)
 }
 
-func hostKeyCallback() ssh.HostKeyCallback {
-	callback, err := knownhosts.New("known_hosts")
+func loadHostKeys() ssh.HostKeyCallback {
+	// Create a temporary file
+	tmpFile, err := os.CreateTemp("", "*")
+	if err != nil {
+		fmt.Println("Error creating temp hosts file:", err)
+		os.Exit(1)
+	}
+	defer os.Remove(tmpFile.Name()) // Clean up the file afterward
+
+	// Write the in-memory known_hosts data to the temporary file
+	if _, err := tmpFile.Write([]byte(knownHosts)); err != nil {
+		fmt.Println("Error writing to temp hosts file:", err)
+		os.Exit(1)
+	}
+	tmpFile.Close()
+
+	callback, err := knownhosts.New(tmpFile.Name())
 	if err != nil {
 		fmt.Println("Failed to load known hosts:", err)
 		os.Exit(1)
