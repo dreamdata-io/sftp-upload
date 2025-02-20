@@ -1,13 +1,34 @@
 import os
+import subprocess
+import sys
 import tempfile
 import paramiko
 import argparse
 import getpass
+import importlib.metadata
 
-
+REQUIREMENTS_FILE = 'requirements.txt'
 KNOWN_HOSTS = """ftp.dreamdata.io ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDQQtl6pUnabMzYU/dmBlCmZ3ef8grqCDjnuWZBzevR9wiIbi6mWZhTLyRAlCTaB8EiLiBTeyGGRWXvQXSiXYoC7CpIu6x0u26XZIL6kOBt9qRo2DjIfMZuLOar191Zcj1WnANrzFrjw6cxBsNOS6E7hjzCfKqPU2b/ldLGBptm2C7gMUQSULaNzPLOqfhAC2TW5a+Ah9nLyZvxJL7+7fL3u76hIOS0uJqN4nsqncC4ql14GWr+zA2wltRVoYywAHqrDQqkfC/IDeURQzpzjb1WW+5vt51mVye+ULwmJxQXredo4X4AAdTNm8zyxnxZvKR7SbBfDlpxo3a3GF8Ohvc6wkBp8OnLdJexIw+ejtDZZiqWX4qqtOjUAS61a6u2wjgjTX7PpI2t4KVoZ09rLDkvDRu3bTKuj6FZ6qY7zq96Uo7W1guAEEgKr5NfgY3zcxxmFFL+SR5Yj+v06vPiA6AVaVOusz2Mfst0cnAyV7SuY/0CmrmS7S5XQbRsk5cHjhk=
 ftp.dreamdata.io ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGBFkxOWRqLeWzGD5xhkIlheQ9Kg3Z6fehdJ1RUYrHXzISrhr0NaoAWL9ivJMQjazCi1ouWhRV3wAMhxVvo7Ga4=
 ftp.dreamdata.io ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDQEtBMtsoTrJYrHL23oxpoYxclEsC8KCLU336xh3Uzk"""
+
+try:
+    with open(REQUIREMENTS_FILE, 'r') as f:
+        requirements = f.read().splitlines()
+
+        for requirement in requirements:
+            try:
+                importlib.metadata.version(requirement.split('==')[0])
+            except importlib.metadata.PackageNotFoundError:
+                print(f"Installing requirement: {requirement}")
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', REQUIREMENTS_FILE])
+            except importlib.metadata.VersionConflict as e:
+                print(f"Version conflict: {e}")
+                sys.exit(1)
+
+except subprocess.CalledProcessError as e:
+    print(f"Failed to install requirements: {e}")
+    sys.exit(1)
 
 
 def prompt_bool(prompt):
@@ -28,7 +49,7 @@ def upload_file(sftp, local_path, remote_path):
 def upload(sftp, local_dir, remote_dir, no_prompt):
     for root, dirs, files in os.walk(local_dir):
         for d in dirs:
-            if not no_prompt and not prompt_bool(f"You will upload all files in {os.path.join(root, d)}. Continue? [y/n]"):
+            if not no_prompt and not prompt_bool(f"You will upload all files in {os.path.join(root, d)}. Continue? (y/[n])"):
                 dirs.remove(d)
         for file in files:
             local_path = os.path.join(root, file)
@@ -76,6 +97,7 @@ def main():
         ssh.close()
     except Exception as e:
         print(f"Error closing connection: {e}")
+        sys.exit(1)
 
     print("All files uploaded successfully.")
 
