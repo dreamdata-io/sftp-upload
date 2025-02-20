@@ -106,7 +106,7 @@ func main() {
 
 			// Create directories on the remote server
 			if info.IsDir() {
-				if !promptBool(fmt.Sprintf("You will upload all files in %s. Continue? (y/n): ", path)) {
+				if !promptBool(fmt.Sprintf("You will upload all files in %s. Continue? (y/[n]): ", path)) {
 					return filepath.SkipDir
 				}
 				if err := sftpClient.MkdirAll(path); err != nil {
