@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/pkg/sftp v1.13.7
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/term v0.29.0
 )
 
