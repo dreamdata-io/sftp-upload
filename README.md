@@ -4,7 +4,7 @@ Example code to upload files to Dreamdata(c) custom crm sftp server.
 
 If you have any specific requirements, you will need to modify the code to suit your needs.
 
-source code in [GO](main.go) and [Python](main.py)
+source code available in [GO](main.go) and [Python](main.py)
 
 ## Usage
 
